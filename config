@@ -1,0 +1,16 @@
+{
+    "short": "wiki", 
+    "redir_to": "http://en.wikipedia.org/w/index.php?title=Special:UserLogin&action=submitlogin&type=login", 
+    "textField": "wpTextbox1", 
+    "url": "http://en.wikipedia.org/w/index.php?title=User:Aravindp1510/*&action=edit", 
+    "fields": [
+        "wpName", 
+        "wpPassword"
+    ], 
+    "loginurl": "http://en.wikipedia.org/wiki/Special:UserLogin", 
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11", 
+    "extraFields": [
+        "wpLoginToken", 
+        "wpLoginAttempt"
+    ]
+}
