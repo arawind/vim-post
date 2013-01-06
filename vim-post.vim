@@ -49,12 +49,12 @@ class MultipartPostHandler(urllib2.BaseHandler):
 #                data = urllib.urlencode(v_vars, doseq)
 #            else:  Removed the conditions as this makes MultipartPostHandler handles only forms with files as multipart-forms
                         
-             boundary, data = self.multipart_encode(v_vars, v_files)
-             contenttype = 'multipart/form-data; boundary=%s' % boundary
-             if(request.has_header('Content-Type')
-                and request.get_header('Content-Type').find('multipart/form-data') != 0):
-                print "Replacing %s with %s" % (request.get_header('content-type'), 'multipart/form-data')
-             request.add_unredirected_header('Content-Type', contenttype)
+            boundary, data = self.multipart_encode(v_vars, v_files)
+            contenttype = 'multipart/form-data; boundary=%s' % boundary
+            if(request.has_header('Content-Type')
+               and request.get_header('Content-Type').find('multipart/form-data') != 0):
+               print "Replacing %s with %s" % (request.get_header('content-type'), 'multipart/form-data')
+            request.add_unredirected_header('Content-Type', contenttype)
 
             request.add_data(data)
         return request
@@ -91,19 +91,8 @@ def raw_input(message = 'Input'):
     vim.command('let user_input = input("'+message+' ")')
     vim.command('call inputrestore()')
     return  vim.eval('user_input')
-if doWhat=='config':
-    createConfig()
-    exit()
-try:
-    f = open('config','r')
-    try:
-        dic = json.load(f)
-        f.close()
-    except ValueError:
-        f.close()
-        createConfig()
-except:
-    createConfig()
+#if doWhat=='config':
+#    createConfig()
 
 
 def createConfig():
@@ -134,6 +123,16 @@ def createConfig():
     f.close()
 #START 
 
+try:
+    f = open('config','r')
+    try:
+        dic = json.load(f)
+        f.close()
+    except ValueError:
+        f.close()
+        createConfig()
+except:
+    createConfig()
 #Take current file name from the buffer
 filename = vim.current.buffer.name.split('/')[-1] #'common.js'
 textField = dic['textField']
@@ -154,14 +153,14 @@ opener1.addheaders = [('User-agent',ua)]
 
 response1 = opener1.open(loginurl)
 soup = BeautifulSoup(response1.read())
-
 #Get the extra values 
 extraVals = []
-for field in extraFields:
-    extraField = (soup.select('input[name="'+field+'"]')[0]['value'])
-    extraVals.append(extraField)
-fields = fields+extraFields
-values = values+extraVals
+if len(extraFields[0])>0:
+    for field in extraFields:
+        extraField = (soup.select('input[name="'+field+'"]')[0]['value'])
+        extraVals.append(extraField)
+    fields = fields+extraFields
+    values = values+extraVals
 
 #Form the post data
 data = dict(izip(fields,values))
@@ -174,12 +173,13 @@ response2 = opener1.open(redir_to,data)
 #Open the post url
 response3 = opener1.open(url)
 soup = BeautifulSoup(response3.read())
-
+#print(textField)
 txtarea = soup.select('textarea[name="'+textField+'"]')[0]
 
 if(doWhat=='upload'):
     form = txtarea.find_parent('form')
     formAttrs = form.attrs
+    #print(formAttrs)
     hiddenInputs = form.select('input[type="hidden"]')
     hiddenData={}
     for hidden in hiddenInputs:
@@ -190,12 +190,14 @@ if(doWhat=='upload'):
             #pass
     scheme = urlparse.urlparse(url)[0]
     domain = urlparse.urlparse(url)[1]
+    path=urlparse.urlparse(url)[2]
     schemeDomain = scheme+'://'+domain
     if(formAttrs['action'].find(domain) == -1):
+        #print(path)
         if formAttrs['action'][0] == '/':
             postURL = schemeDomain+formAttrs['action']
         else:
-            postURL = schemeDomain+'/'+formAttrs['action']
+            postURL = schemeDomain+path[:path.rfind('/')]+'/'+formAttrs['action']
     #Get current buffer's data
     bData = vim.current.buffer[:]
     bData = ('\n'.join(bData))
@@ -214,10 +216,9 @@ if(doWhat=='upload'):
     except:
         postData = urllib.urlencode(postData)
         postData = postData.encode('utf-8')
-
+    #print(postURL)
     response4 = opener1.open(postURL,postData)
     print('Uploaded!')
-
 #Download
 elif doWhat=='download':
     dwnData = txtarea.string
