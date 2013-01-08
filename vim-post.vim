@@ -1,3 +1,32 @@
+" Aravind Pedapudi
+" Vim-Post plugin
+" http://arawind.com
+" http://github.com/arawind/vim-post
+" Requires + python2 compiled vim 
+"          + python2 BeautifulSoup module from crummy.com
+" Uses POST to sync the current file on the server
+" Works with any captcha-less online editors
+" Tested for: Wikimedia User script editor, Wordpress theme/plugin editors
+
+" Insert 'source /the/directory/vim-post.vim' in your '~/.vimrc' file
+" OR
+" Add to your '~/.vim/plugins' folder -- NOT TESTED
+
+" NOTE ##########################################################
+" The prompt where this plugin asks for your username/passwd,
+" echoes out every character. That is, your password will be visible
+" as you enter it. This has to be fixed.
+
+" First run: Creates a config file which asks for the login url, the post url and a bunch of other stuff
+
+" Commands
+"       :Upload     Upload the current file onto the server
+"       :Download   Download the latest file from the server
+"       :Reconfig   Reconfigure the config file (a json file, easier to edit by hand)
+
+" Lots of exceptions to handle, too much work.. Though willing to do if encouraged
+
+
 if !has('python')
     echo "Error: Required vim compiled with +python"
     finish
@@ -6,9 +35,15 @@ endif
 :command Download call VimPost('download')
 :command Reconfig call VimPost('config')
 
+" You can call this function even this way--  :call VimPost('upload')
 
 function! VimPost(doWhat)
 python <<EOF
+
+# VIM module for getting buffer data, updating it too
+# BeautifulSoup for screenscraping
+# json for config file
+# mimetools, mimetypes, os, stat modules required by MultipartPostHandler
 
 import vim
 import urllib2, urllib, urlparse
@@ -18,7 +53,12 @@ from itertools import izip
 import json
 import mimetools, mimetypes
 import os, stat
-#FROM http://pipe.scs.fsu.edu/PostHandler/MultipartPostHandler.py
+
+# Had to copy/paste this MultipartPostHandler,
+# as I didn't know how to import modules into vim-python plugins
+
+
+# FROM http://pipe.scs.fsu.edu/PostHandler/MultipartPostHandler.py
 class Callable:
     def __init__(self, anycallable):
         self.__call__ = anycallable
@@ -85,15 +125,23 @@ class MultipartPostHandler(urllib2.BaseHandler):
     https_request = http_request
 #END MultipartPostHandler
 
+
+# Get arguments
+
 doWhat = vim.eval("a:doWhat")
+
+# Reconfigure raw_input to accept vim inputs
+
+# FIND OUT A WAY TO PREVENT ECHOING
+
 def raw_input(message = 'Input'):
     vim.command('call inputsave()')
     vim.command('let user_input = input("'+message+' ")')
     vim.command('call inputrestore()')
     return  vim.eval('user_input')
-#if doWhat=='config':
-#    createConfig()
 
+
+# Function to create the config file
 
 def createConfig():
     short = raw_input('Short name: ')
@@ -122,6 +170,9 @@ def createConfig():
     }
     f.write(json.dumps(dic,sort_keys = False,indent = 4))
     f.close()
+
+
+
 #START 
 
 try:
@@ -134,17 +185,36 @@ try:
         createConfig()
 except:
     createConfig()
-#Take current file name from the buffer
+
+
+# Take current file name from the buffer
+# Does not so good job as it gets the filename by splitting the '/'s and getting the last word
+# Wordpress theme editor uses the '/' character to separate folder and file name, and this causes confusion (index.php and lib/index.php will upload to the same file, index.php)
+
+
 filename = vim.current.buffer.name.split('/')[-1] #'common.js'
 textField = dic['textField']
 url = dic['url'] #'http://en.wikipedia.org/w/index.php?title=User:Aravindp1510/'+filename+'&action=edit'
+
+# While entering the url into the config file, add a * where the filename goes
+# This * is replaced by the current filename
+
 url = url[:url.find('*')]+filename+url[url.find('*')+1:]
 values = [] 
 loginurl = dic['loginurl'] #'http://en.wikipedia.org/wiki/Special:UserLogin'
+
+# redir_to = form action; It is redundant as I can scrape it off from the page. Will be removed soon
+
 redir_to = dic['redir_to'] #'http://en.wikipedia.org/w/index.php?title=Special:UserLogin&action=submitlogin&type=login'
 ua = dic['ua'] #'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11'
 fields = dic['fields'] #['wpName','wpPassword']
+
+# extraFields = Input fields through which the form sends generated information
+# Unnecessary again. Will be removed
+
 extraFields = dic['extraFields'] #['wpLoginToken','wpLoginAttempt']
+
+# Check for login through cookies
 
 login=True
 
@@ -167,7 +237,7 @@ if login:
         values.append(raw_input(field+"?"))
     response1 = opener1.open(loginurl)
     soup = BeautifulSoup(response1.read())
-#Get the extra values 
+#Get the generated values (To be removed) 
     extraVals = []
     if len(extraFields[0])>0:
         for field in extraFields:
@@ -181,6 +251,8 @@ if login:
     data = urllib.urlencode(data)
     data = data.encode('utf-8')
 
+# opener1 as of now is not MultipartForm compatible. So if the login screen has a multipartform, this needs to be adjusted
+
 #Send the post data, collect auth tokens
     response2 = opener1.open(redir_to,data)
 
@@ -188,9 +260,10 @@ if login:
 #Open the post url
 response3 = opener1.open(url)
 soup = BeautifulSoup(response3.read())
-#print(soup)
-#print(textField)
 txtarea = soup.select('textarea[name="'+textField+'"]')[0]
+
+if doWhat=='config':
+    createConfig()
 
 if(doWhat=='upload'):
     form = txtarea.find_parent('form')

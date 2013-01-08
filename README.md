@@ -3,20 +3,20 @@
 #####A vim plugin written in python
 
 ####Requirements:
-vim compiled with python2
-BeautifulSoup4 python2 module
++ vim compiled with python2
++ BeautifulSoup4 python2 module
 
 #####Working:
 Add the vim-post.vim file to your plugin directory (~/.vim/plugins) 
 or add this to your ~/.vimrc
-```viml
+```
 source /some/other/dir/vim-post.vim
 ```
 (Optional) The config file goes in your working directory. If the dir doesn't have any config file, a new one will be created on first run
 
 #####Config file:
 It contains a json object whose values are used by the plugin to connect
-
+```
 'short'       : short name for the host - no use with this
 
 'url'         : The POST url
@@ -32,3 +32,6 @@ It contains a json object whose values are used by the plugin to connect
 'extraFields' : Hidden fields' names ------> to be removed in future versions
 
 'textField'   : The textarea field's name where the data has to be entered
+
+'cookieLength': The number of cookies in the .cookies file - Not to be edited
+```
