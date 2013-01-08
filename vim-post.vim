@@ -117,7 +117,8 @@ def createConfig():
     'ua':ua,
     'fields':fields,
     'extraFields':extraFields,
-    'textField':textField
+    'textField':textField,
+    'cookieLength':0
     }
     f.write(json.dumps(dic,sort_keys = False,indent = 4))
     f.close()
@@ -143,36 +144,51 @@ loginurl = dic['loginurl'] #'http://en.wikipedia.org/wiki/Special:UserLogin'
 redir_to = dic['redir_to'] #'http://en.wikipedia.org/w/index.php?title=Special:UserLogin&action=submitlogin&type=login'
 ua = dic['ua'] #'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11'
 fields = dic['fields'] #['wpName','wpPassword']
-for field in fields:
-    values.append(raw_input(field+"?"))
 extraFields = dic['extraFields'] #['wpLoginToken','wpLoginAttempt']
 
-cookies = cookielib.CookieJar()
+login=True
+
+cookies = cookielib.MozillaCookieJar('.cookies')
+if 'cookieLength' in dic:
+    if dic['cookieLength'] !=0:
+        cookies.load('.cookies',ignore_discard=True)
+        login = False
+else:
+    dic['cookieLength'] = 0
+    f=open('config','w')
+    f.write(json.dumps(dic,sort_keys=False,indent=4))
+    f.close()
+    
 opener1 = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookies))
 opener1.addheaders = [('User-agent',ua)]
 
-response1 = opener1.open(loginurl)
-soup = BeautifulSoup(response1.read())
+if login:
+    for field in fields:
+        values.append(raw_input(field+"?"))
+    response1 = opener1.open(loginurl)
+    soup = BeautifulSoup(response1.read())
 #Get the extra values 
-extraVals = []
-if len(extraFields[0])>0:
-    for field in extraFields:
-        extraField = (soup.select('input[name="'+field+'"]')[0]['value'])
-        extraVals.append(extraField)
-    fields = fields+extraFields
-    values = values+extraVals
+    extraVals = []
+    if len(extraFields[0])>0:
+        for field in extraFields:
+            extraField = (soup.select('input[name="'+field+'"]')[0]['value'])
+            extraVals.append(extraField)
+        fields = fields+extraFields
+        values = values+extraVals
 
 #Form the post data
-data = dict(izip(fields,values))
-data = urllib.urlencode(data)
-data = data.encode('utf-8')
+    data = dict(izip(fields,values))
+    data = urllib.urlencode(data)
+    data = data.encode('utf-8')
 
 #Send the post data, collect auth tokens
-response2 = opener1.open(redir_to,data)
+    response2 = opener1.open(redir_to,data)
+
 
 #Open the post url
 response3 = opener1.open(url)
 soup = BeautifulSoup(response3.read())
+#print(soup)
 #print(textField)
 txtarea = soup.select('textarea[name="'+textField+'"]')[0]
 
@@ -231,5 +247,12 @@ elif doWhat=='download':
     vim.command('badd '+curFileName)
     vim.command('buffer '+curFileName)
     print('Downloaded to '+curFileName+'!')
+
+cookies.save('.cookies',ignore_discard=True)
+if dic['cookieLength']==0:
+    dic['cookieLength'] = len(cookies)
+    f=open('config','w')
+    f.write(json.dumps(dic, sort_keys=False, indent=4))
+    f.close()
 EOF
 endfunction
